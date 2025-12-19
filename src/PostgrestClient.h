@@ -481,6 +481,41 @@ private:
         return nullptr;
     }
 
+    // Validate current JWT expiry and re-signin if necessary.
+    // Returns nullptr on success, or an error message on failure.
+    const char *refreshTokenIfNeeded()
+    {
+        if (!_isSignedIn)
+            return ERROR_NOT_SIGNED_IN;
+
+        // If we don't have an expiry, attempt to sign in again if credentials are available
+        if (_tokenExpiry == 0)
+        {
+            if (!_email || !_password)
+                return "no credentials to refresh token";
+            return signIn(_email, _password);
+        }
+
+        // Compute current time based on stored iat and elapsed millis
+        unsigned long elapsed_ms = 0;
+        if (millis() >= _internalTimeIat)
+            elapsed_ms = millis() - _internalTimeIat;
+        else
+            elapsed_ms = 0; // protect against wrap (very unlikely)
+
+        uint32_t now = _tokenIat + (uint32_t)(elapsed_ms / 1000U);
+
+        // If token expires within the next 60 seconds, refresh it
+        if (now + 60U >= _tokenExpiry)
+        {
+            if (!_email || !_password)
+                return "no credentials to refresh token";
+            return signIn(_email, _password);
+        }
+
+        return nullptr;
+    }
+
 private:
     WiFiClient &_client;
     const char *_authHost;
