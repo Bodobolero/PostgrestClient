@@ -87,6 +87,9 @@ public:
         if (strcmp(resName, name) != 0)
             return "name mismatch";
 
+        request.clear();
+        response.clear();
+
         return nullptr;
     }
 
@@ -138,6 +141,9 @@ public:
         if (!emailVerified)
             return "email not verified";
 
+        request.clear();
+        response.clear();
+
         return nullptr;
     }
 
@@ -146,7 +152,7 @@ public:
      *
      * @param email
      * @param password
-     * @return const char* 0 or errore message
+     * @return const char* 0 or error message
      */
     const char *signIn(const char *email, const char *password)
     {
@@ -172,6 +178,9 @@ public:
         if (err2)
             return err2;
 
+        request.clear();
+        response.clear();
+
         return nullptr;
     }
 
@@ -187,6 +196,12 @@ public:
         Serial.println(_tokenIat);
         Serial.print("exp: ");
         Serial.println(_tokenExpiry);
+        Serial.print("local time iat: ");
+        Serial.println(_internalTimeIat / 1000U);
+        Serial.print("current local time: ");
+        Serial.println(millis() / 1000U);
+        Serial.print("token expires in (s): ");
+        Serial.println(_tokenExpiry - _tokenIat - (millis() - _internalTimeIat) / 1000U);
     }
 
     JsonDocument &getJsonRequest()
