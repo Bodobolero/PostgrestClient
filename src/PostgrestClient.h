@@ -121,7 +121,7 @@ public:
         request["email"] = email;
         request["otp"] = otp;
 
-        const char *err = postJsonAuth("/email-otp/verify-email", timeout);
+        const char *err = postJsonAuth("/email-otp/verify-email", timeout, true);
         if (err)
             return err;
 
@@ -164,12 +164,12 @@ public:
         request.clear();
         request["email"] = email;
         request["password"] = password;
-        const char *err = postJsonAuth("/sign-in/email", 20000);
+        const char *err = postJsonAuth("/sign-in/email", 20000, true);
         if (err)
             return err;
 
         // session token may be present in Set-Cookie header captured into _sessionCookie
-        const char *sessionToken = (_sessionCookie[0] != '\0') ? _sessionCookie : response["token"];
+        const char *sessionToken = (_sessionCookie[0] != '\0') ? (const char *)_sessionCookie : response["token"].as<const char *>();
         if (!sessionToken || sessionToken[0] == '\0')
             return "no session token in sign-in response";
 
@@ -286,7 +286,7 @@ private:
     // Helper to POST the current `request` JsonDocument to the auth path + `pathSuffix`.
     // On success the parsed JSON response is stored in `response` and nullptr is returned.
     // On error an error message (pointer to `_status` or static string) is returned.
-    const char *postJsonAuth(const char *pathSuffix, unsigned long timeout)
+    const char *postJsonAuth(const char *pathSuffix, unsigned long timeout, bool setCookie = false)
     {
         // Connect to auth host
         if (!_client.connect(_authHost, 443))
@@ -330,8 +330,10 @@ private:
             return "request timed out";
         }
 
-        size_t bytes_read = _client.readBytesUntil('\r', _status, sizeof(_status) - 1);
+        size_t bytes_read = _client.readBytesUntil('\n', _status, sizeof(_status) - 1);
         _status[bytes_read] = 0;
+        Serial.println("HTTP status line:");
+        Serial.println(_status); // TODO remove for production
         int status_code = 0;
         if (bytes_read >= 12)
             sscanf(_status + 9, "%3d", &status_code);
@@ -340,47 +342,81 @@ private:
             _client.stop();
             return _status;
         }
-
-        // Reset session cookie buffer and reuse it as a header line buffer
-        _sessionCookie[0] = '\0';
-
-        // Read headers line by line directly into _sessionCookie to avoid extra stack buffers
-        while (true)
+        bool cookie_found = false;
+        if (setCookie)
         {
-            size_t hlen = _client.readBytesUntil('\n', _sessionCookie, sizeof(_sessionCookie) - 1);
-            if (hlen == 0)
-                break;
-            _sessionCookie[hlen] = 0; // includes possible '\r'
-            // blank line -> end of headers
-            if (hlen == 1 && _sessionCookie[0] == '\r')
-                break;
-            const char *p = _sessionCookie;
-            while (*p == ' ' || *p == '\t')
-                p++;
-            // Check for Set-Cookie header
-            if (strncmp(p, "Set-Cookie:", 11) == 0 || strncmp(p, "set-cookie:", 11) == 0)
+
+            // Reset session cookie buffer and reuse it as a header line buffer
+            _sessionCookie[0] = '\0';
+
+            // Read headers line by line directly into _sessionCookie to avoid extra stack buffers.
+            // Stop early once we've captured the session cookie so we don't consume the JSON body.
+            while (true)
             {
-                const char *val = p + 11;
-                while (*val == ' ' || *val == '\t')
-                    val++;
-                // look for session cookie name
-                const char *found = strstr(val, "__Secure-neon-auth.session_token=");
-                if (found)
+                size_t hlen = _client.readBytesUntil('\n', _sessionCookie, sizeof(_sessionCookie) - 1);
+                if (hlen == 0)
+                    break;
+                _sessionCookie[hlen] = 0; // includes possible '\r'
+                // remove for production
+                // Serial.println(_sessionCookie);
+                // blank line -> end of headers
+                if (hlen == 1 && _sessionCookie[0] == '\r')
+                    break;
+                const char *p = _sessionCookie;
+                while (*p == ' ' || *p == '\t')
+                    p++;
+                // Check for Set-Cookie header
+                if (strncmp(p, "Set-Cookie:", 11) == 0 || strncmp(p, "set-cookie:", 11) == 0)
                 {
-                    const char *cookie_start = found + strlen("__Secure-neon-auth.session_token=");
-                    // copy until ';' or CR
-                    const char *end = cookie_start;
-                    while (*end && *end != ';' && *end != '\r' && *end != '\n')
-                        end++;
-                    size_t clen = (size_t)(end - cookie_start);
-                    if (clen >= sizeof(_sessionCookie))
-                        clen = sizeof(_sessionCookie) - 1;
-                    // Move the cookie value to the start of the buffer
-                    memmove(_sessionCookie, cookie_start, clen);
-                    _sessionCookie[clen] = 0;
+                    const char *val = p + 11;
+                    while (*val == ' ' || *val == '\t')
+                        val++;
+                    // look for session cookie name
+                    const char *found = strstr(val, "__Secure-neon-auth.session_token=");
+                    if (found)
+                    {
+                        const char *cookie_start = found + strlen("__Secure-neon-auth.session_token=");
+                        // copy until ';' or CR
+                        const char *end = cookie_start;
+                        while (*end && *end != ';' && *end != '\r' && *end != '\n')
+                            end++;
+                        size_t clen = (size_t)(end - cookie_start);
+                        if (clen >= sizeof(_sessionCookie))
+                            clen = sizeof(_sessionCookie) - 1;
+                        // Move the cookie value to the start of the buffer
+                        memmove(_sessionCookie, cookie_start, clen);
+                        _sessionCookie[clen] = 0;
+                        // remove for production
+                        // Serial.println("Found session cookie:");
+                        // Serial.println(_sessionCookie);
+                        cookie_found = true;
+                        // stop reading more header lines now; remaining headers will be skipped below
+                        break;
+                    }
                 }
             }
         }
+
+        // If we found the cookie and haven't consumed the rest of headers yet, skip remaining headers
+        if (!setCookie || cookie_found)
+        {
+            char endOfHeaders[] = "\r\n\r\n";
+            if (!_client.find(endOfHeaders))
+            {
+                _client.stop();
+                return "Invalid response";
+            }
+        }
+
+        // read json, remove for production
+        // size_t hlen = _client.readBytesUntil('\n', _sessionCookie, sizeof(_sessionCookie) - 1);
+        // if (hlen != 0)
+        // {
+        //     _sessionCookie[hlen] = 0; // includes possible '\r'
+        //     // TODO remove for production
+        //     Serial.println("JSON response:");
+        //     Serial.println(_sessionCookie);
+        // }
 
         // Parse JSON response into `response` member
         DeserializationError err = deserializeJson(response, _client);
@@ -553,7 +589,7 @@ private:
     // payload for requests and responses - one at a time
     JsonDocument request;
     JsonDocument response;
-}
+};
 
 static const char *
 find_char_n(const char *s, size_t n, char c)

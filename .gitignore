@@ -56,3 +56,7 @@ dkms.conf
 
 # secrets
 .env
+arduino_secrets.h
+
+# helpers
+deploy.sh
