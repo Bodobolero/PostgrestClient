@@ -162,6 +162,7 @@ public:
 
         // First request: POST /sign-in/email to obtain session token (and Set-Cookie)
         request.clear();
+        response.clear();
         request["email"] = email;
         request["password"] = password;
         const char *err = postJsonAuth("/sign-in/email", 20000, true);
@@ -169,12 +170,17 @@ public:
             return err;
 
         // session token may be present in Set-Cookie header captured into _sessionCookie
-        const char *sessionToken = (_sessionCookie[0] != '\0') ? (const char *)_sessionCookie : response["token"].as<const char *>();
-        if (!sessionToken || sessionToken[0] == '\0')
+        if (_sessionCookie[0] == '\0')
             return "no session token in sign-in response";
 
+        request.clear();
+        response.clear();
+
+        // Serial.println("Phase 1 completed. Session cookie:");
+        // Serial.println(_sessionCookie);
+
         // Second request: GET /get-session with Cookie header to retrieve JWT from header
-        const char *err2 = getSessionJWTWithCookie(sessionToken, 20000);
+        const char *err2 = getSessionJWTWithCookie(20000);
         if (err2)
             return err2;
 
@@ -332,8 +338,8 @@ private:
 
         size_t bytes_read = _client.readBytesUntil('\n', _status, sizeof(_status) - 1);
         _status[bytes_read] = 0;
-        Serial.println("HTTP status line:");
-        Serial.println(_status); // TODO remove for production
+        // Serial.println("HTTP status line:");
+        // Serial.println(_status); // TODO remove for production
         int status_code = 0;
         if (bytes_read >= 12)
             sscanf(_status + 9, "%3d", &status_code);
@@ -342,7 +348,6 @@ private:
             _client.stop();
             return _status;
         }
-        bool cookie_found = false;
         if (setCookie)
         {
 
@@ -389,7 +394,6 @@ private:
                         // remove for production
                         // Serial.println("Found session cookie:");
                         // Serial.println(_sessionCookie);
-                        cookie_found = true;
                         // stop reading more header lines now; remaining headers will be skipped below
                         break;
                     }
@@ -397,15 +401,12 @@ private:
             }
         }
 
-        // If we found the cookie and haven't consumed the rest of headers yet, skip remaining headers
-        if (!setCookie || cookie_found)
+        // skip remaining headers
+        char endOfHeaders[] = "\r\n\r\n";
+        if (!_client.find(endOfHeaders))
         {
-            char endOfHeaders[] = "\r\n\r\n";
-            if (!_client.find(endOfHeaders))
-            {
-                _client.stop();
-                return "Invalid response";
-            }
+            _client.stop();
+            return "Invalid response";
         }
 
         // read json, remove for production
@@ -430,9 +431,9 @@ private:
     }
 
     // Helper: perform GET /get-session with given session cookie value, parse JWT and store it.
-    const char *getSessionJWTWithCookie(const char *sessionToken, unsigned long timeout)
+    const char *getSessionJWTWithCookie(unsigned long timeout)
     {
-        if (!sessionToken || sessionToken[0] == '\0')
+        if (_sessionCookie[0] == '\0')
             return "empty session token";
 
         if (!_client.connect(_authHost, 443))
@@ -449,7 +450,7 @@ private:
         _client.println("Accept: application/json");
         _client.println("Origin: https://example.com");
         _client.print("Cookie: __Secure-neon-auth.session_token=");
-        _client.println(sessionToken);
+        _client.println(_sessionCookie);
         _client.print("\r\n");
         _client.flush();
 
@@ -465,7 +466,7 @@ private:
         }
 
         // Read status line
-        size_t bytes_read = _client.readBytesUntil('\r', _status, sizeof(_status) - 1);
+        size_t bytes_read = _client.readBytesUntil('\n', _status, sizeof(_status) - 1);
         _status[bytes_read] = 0;
         int status_code = 0;
         if (bytes_read >= 12)
@@ -493,6 +494,8 @@ private:
                 p++;
             if (strncmp(p, "set-auth-jwt:", 13) == 0 || strncmp(p, "Set-Auth-Jwt:", 13) == 0)
             {
+                // Serial.println("Found set-auth-jwt header"); // remove for production
+                // Serial.println(_jwtBuffer);                  // remove for production
                 const char *val = p + 13;
                 while (*val == ' ' || *val == '\t')
                     val++;
@@ -505,8 +508,18 @@ private:
                 // Move the JWT value to the start of the buffer (it may already be there)
                 memmove(_jwtBuffer, val, vlen);
                 _jwtBuffer[vlen] = 0;
+                // Serial.println("Captured JWT:"); // remove for production
+                // Serial.println(_jwtBuffer);      // remove for production
                 haveJwt = true;
+                break;
             }
+        }
+        // skip remaining headers
+        char endOfHeaders[] = "\r\n\r\n";
+        if (!_client.find(endOfHeaders))
+        {
+            _client.stop();
+            return "Invalid response";
         }
 
         // Now read and parse JSON body into response

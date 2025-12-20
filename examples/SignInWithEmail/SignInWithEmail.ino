@@ -4,13 +4,11 @@
 
 // ---------------------------------------------------------------------------------------------------------
 // This is a basic example that does not need any sensors or actuators connected to your microcontroller.
-// It only shows how to sign up to the Neon Auth service with email and password.
-// Note that the signup process needs to be continued within a few minutes by verifying the email address
-// using the OTP code that is sent to the email address you provide during signup.
+// It only shows how to sign in to the Neon Auth service with email and password.
+// Note that the signup process needs to be completed before the signin.
 // For security reasons it is recommended to do the signup and email verification NOT from the arduino device.
 // Better is to do it manually using curl or from a secure backend server.
 // See the curlscripts/ directory in the librarie's repository for example curl scripts that do the signup and email verification.
-// After successful invocation of this example continue with the VerifyEmailWithOTP example to verify your email address.
 // ---------------------------------------------------------------------------------------------------------
 
 #include <SPI.h>
@@ -60,17 +58,17 @@ void setup()
     }
     Serial.println("Connected to WiFi");
 
-    Serial.println("\nSigning up your email in Neon auth...");
-    const char *errorMessage = pgClient.signUp(USER_NAME, USER_EMAIL, USER_PASSWORD);
+    Serial.println("\nSigning in with email in Neon auth...");
+    const char *errorMessage = pgClient.signIn(USER_EMAIL, USER_PASSWORD);
     if (errorMessage)
     {
-        Serial.print("Sign up failed: ");
+        Serial.print("Sign in failed: ");
         Serial.println(errorMessage);
     }
     else
     {
-        Serial.println("Sign up successful. Now verify your email using the OTP code sent to your email address.");
-        Serial.println("Continue with the VerifyEmailWithOTP example.");
+        Serial.println("Sign in successful.");
+        pgClient.printJwt();
     }
 }
 

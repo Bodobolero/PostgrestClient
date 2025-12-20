@@ -60,7 +60,6 @@ void setup()
     }
     Serial.println("Connected to WiFi");
 
-    // create table for sensor values
     Serial.println("\nVerifying your email in Neon auth...");
     const char *errorMessage = pgClient.verifyEmail(USER_EMAIL, VERIFY_MAIL_OTP);
     if (errorMessage)
@@ -71,7 +70,7 @@ void setup()
     else
     {
         Serial.println("Verification successful.");
-        Serial.println("You can now user your email/password combination to sign in to Neon auth.");
+        Serial.println("You can now use your email/password combination to sign in to Neon auth.");
     }
 }
 

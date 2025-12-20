@@ -11,7 +11,7 @@ set +a
 HEADERS="$(mktemp)"
 trap 'rm -f "$HEADERS"' EXIT
 
-curl -sS -D "$HEADERS" -o /dev/null \
+curl --http1.1 -sS -D "$HEADERS" -o /dev/null \
   -H "Content-Type: application/json" \
   -d "{
     \"email\": \"${USER_EMAIL}\",
