@@ -212,7 +212,7 @@ public:
 
     JsonDocument &getJsonRequest()
     {
-        return response;
+        return request;
     }
 
     JsonDocument &getJsonResult()
@@ -226,7 +226,7 @@ public:
     // retrieve all items: "/item"
     // retrieve all people younger than 13: "/people?age=lt.13"
     // see https://docs.postgrest.org/en/v14/references/api/tables_views.html
-    const char *doGet(const char *route)
+    const char *doGet(const char *route, unsigned long timeout = 20000)
     {
         if (!_isSignedIn)
             return ERROR_NOT_SIGNED_IN;
@@ -234,9 +234,14 @@ public:
 
         if (error)
             return error;
-
+        response.clear();
         // Perform GET request to _apiUrl + route with Authorization: Bear
-        return "not implemented";
+        error = invokeDataAPI("GET", route, timeout, true);
+        request.clear();
+        if (error)
+            return error;
+
+        return nullptr;
     }
 
     // insert tuples
@@ -245,7 +250,7 @@ public:
     // route can be like
     // insert new item: "/item"
     // see https://docs.postgrest.org/en/v14/references/api/tables_views.html
-    const char *doPost(const char *route)
+    const char *doPost(const char *route, unsigned long timeout = 20000)
     {
         if (!_isSignedIn)
             return ERROR_NOT_SIGNED_IN;
@@ -253,7 +258,12 @@ public:
         if (error)
             return error;
         // Perform POST request to _apiUrl + route with Authorization: Bear
-        return "not implemented";
+        error = invokeDataAPI("POST", route, timeout, false);
+        request.clear();
+        if (error)
+            return error;
+
+        return nullptr;
     }
 
     // update tuples
@@ -261,7 +271,7 @@ public:
     // all routes must start with a leading '/'
     // route can be like
     // update item with id=5: "/item?id=eq.5"
-    const char *doPatch(const char *route)
+    const char *doPatch(const char *route, unsigned long timeout = 20000)
     {
         if (!_isSignedIn)
             return ERROR_NOT_SIGNED_IN;
@@ -269,7 +279,12 @@ public:
         if (error)
             return error;
         // Perform PATCH request to _apiUrl + route with Authorization: Bear
-        return "not implemented";
+        error = invokeDataAPI("PATCH", route, timeout, false);
+        request.clear();
+        if (error)
+            return error;
+
+        return nullptr;
     }
 
     // delete tuples
@@ -277,15 +292,20 @@ public:
     // all routes must start with a leading '/'
     // route can be like
     // delete item with id=5: "/item?id=eq.5"
-    const char *doDelete(const char *route)
+    const char *doDelete(const char *route, unsigned long timeout = 20000)
     {
         if (!_isSignedIn)
             return ERROR_NOT_SIGNED_IN;
         const char *error = refreshTokenIfNeeded();
         if (error)
             return error;
-        // not implemented yet
-        return "not implemented";
+        // Perform PATCH request to _apiUrl + route with Authorization: Bear
+        error = invokeDataAPI("DELETE", route, timeout, false);
+        request.clear();
+        if (error)
+            return error;
+
+        return nullptr;
     }
 
 private:
@@ -425,6 +445,91 @@ private:
         {
             _client.stop();
             return err.c_str();
+        }
+        _client.stop();
+        return nullptr;
+    }
+
+    // helper to send a request to the data API host
+    const char *invokeDataAPI(const char *verb, const char *pathSuffix, unsigned long timeout = 20000, bool expectJsonResult = false)
+    {
+        // Connect to auth host
+        if (!_client.connect(_apiHost, 443))
+        {
+            return "cannot connect to data api host over Wifi";
+        }
+
+        // Send HTTP request headers (print path parts directly)
+        _client.print(verb);
+        _client.print(" ");
+        _client.print(_apiPath);
+        _client.print(pathSuffix);
+        _client.println(" HTTP/1.1");
+        _client.print("Host: ");
+        _client.println(_apiHost);
+        _client.println("Content-Type: application/json");
+        // _client.println("Accept: application/json");
+        // -H "Authorization: Bearer ${JWT}"
+        _client.print("Authorization: Bearer ");
+        _client.println(_jwtBuffer);
+        if (strncmp(verb, "GET", 3) != 0)
+        {
+            _client.print("Content-Length: ");
+            size_t length = measureJson(request);
+            _client.print(length);
+            _client.print("\r\n\r\n");
+
+            size_t written = serializeJson(request, _client);
+            if (written != length)
+            {
+                _client.stop();
+                return "payload serialization error";
+            }
+        }
+        _client.flush();
+
+        // wait for response
+        unsigned long ms = millis();
+        while (!_client.available() && millis() - ms < timeout)
+        {
+            delay(0);
+        }
+
+        if (!_client.available())
+        {
+            _client.stop();
+            return "request timed out";
+        }
+
+        size_t bytes_read = _client.readBytesUntil('\n', _status, sizeof(_status) - 1);
+        _status[bytes_read] = 0;
+        // Serial.println("HTTP status line:");
+        // Serial.println(_status); // TODO remove for production
+        int status_code = 0;
+        if (bytes_read >= 12)
+            sscanf(_status + 9, "%3d", &status_code);
+        if (status_code < 200 || status_code >= 300)
+        {
+            _client.stop();
+            return _status;
+        }
+
+        if (expectJsonResult)
+        {
+            // skip remaining headers
+            char endOfHeaders[] = "\r\n\r\n";
+            if (!_client.find(endOfHeaders))
+            {
+                _client.stop();
+                return "Invalid response";
+            }
+            // Parse JSON response into `response` member
+            DeserializationError err = deserializeJson(response, _client);
+            if (err)
+            {
+                _client.stop();
+                return err.c_str();
+            }
         }
         _client.stop();
         return nullptr;

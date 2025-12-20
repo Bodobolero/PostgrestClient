@@ -10,7 +10,7 @@
 #define AUTH_HOST "ep-steep-wind-secret.neonauth.c-2.eu-central-1.aws.neon.tech"
 #define AUTH_PATH "/neondb/auth"
 #define API_HOST "ep-steep-wind-secret.apirest.c-2.eu-central-1.aws.neon.tech"
-#define API_PATH "/neondb/rest/v1/"
+#define API_PATH "/neondb/rest/v1"
 
 // valid email that you own - recommended to use "Apple hide my email" or other throw-away email address
 #define USER_EMAIL "eingriffe_lerche.1v@icloud.com"
