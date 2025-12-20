@@ -87,6 +87,22 @@ void setup()
     {
         Serial.println("Insert successful.");
     }
+
+    Serial.println("\nRetrieving sensor values...");
+    errorMessage = pgClient.doGet("/sensorvalues?sensor_name=eq.temperature");
+    if (errorMessage)
+    {
+        Serial.print("GET sensorvalues failed: ");
+        Serial.println(errorMessage);
+        return;
+    }
+    else
+    {
+        Serial.println("Get successful.");
+        JsonDocument &response = pgClient.getJsonResult();
+        serializeJsonPretty(response, Serial);
+        Serial.println();
+    }
 }
 
 void loop()

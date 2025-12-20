@@ -472,6 +472,7 @@ private:
         // -H "Authorization: Bearer ${JWT}"
         _client.print("Authorization: Bearer ");
         _client.println(_jwtBuffer);
+
         if (strncmp(verb, "GET", 3) != 0)
         {
             _client.print("Content-Length: ");
@@ -485,6 +486,13 @@ private:
                 _client.stop();
                 return "payload serialization error";
             }
+        }
+        else
+        {
+            // For GET requests we must terminate headers with an empty line so the server
+            // knows the request is complete. For non-GET requests the Content-Length
+            // and the body (with a following CRLFCRLF) are written above.
+            _client.print("\r\n");
         }
         _client.flush();
 
