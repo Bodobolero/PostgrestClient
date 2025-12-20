@@ -103,6 +103,63 @@ void setup()
         serializeJsonPretty(response, Serial);
         Serial.println();
     }
+
+    Serial.println("\n Updating sensor values > 21.0 to 17.5...");
+    request = pgClient.getJsonRequest();
+    request["sensor_value"] = 17.5;
+    errorMessage = pgClient.doPatch("/sensorvalues?sensor_value=gt.21.0");
+    if (errorMessage)
+    {
+        Serial.print("Update failed: ");
+        Serial.println(errorMessage);
+        return;
+    }
+    else
+    {
+        Serial.println("Update successful.");
+        Serial.println("\nRetrieving sensor values...");
+        errorMessage = pgClient.doGet("/sensorvalues?sensor_name=eq.temperature");
+        if (errorMessage)
+        {
+            Serial.print("GET sensorvalues failed: ");
+            Serial.println(errorMessage);
+            return;
+        }
+        else
+        {
+            Serial.println("Get successful.");
+            JsonDocument &response = pgClient.getJsonResult();
+            serializeJsonPretty(response, Serial);
+            Serial.println();
+        }
+    }
+    Serial.println("\n Deleting sensor values < 20.0...");
+    errorMessage = pgClient.doDelete("/sensorvalues?sensor_value=lt.20.0");
+    if (errorMessage)
+    {
+        Serial.print("Delete failed: ");
+        Serial.println(errorMessage);
+        return;
+    }
+    else
+    {
+        Serial.println("Delete successful.");
+        Serial.println("\nRetrieving sensor values...");
+        errorMessage = pgClient.doGet("/sensorvalues?sensor_name=eq.temperature");
+        if (errorMessage)
+        {
+            Serial.print("GET sensorvalues failed: ");
+            Serial.println(errorMessage);
+            return;
+        }
+        else
+        {
+            Serial.println("Get successful.");
+            JsonDocument &response = pgClient.getJsonResult();
+            serializeJsonPretty(response, Serial);
+            Serial.println();
+        }
+    }
 }
 
 void loop()
