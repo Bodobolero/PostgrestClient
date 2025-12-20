@@ -1,0 +1,37 @@
+{
+    "name": "PostgrestClient",
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Store sensor data in PostgreSQL. SQL over HTTP for Arduino using Postgrest extension",
+    "keywords": [
+        "postgres",
+        "http",
+        "sql",
+        "database",
+        "postgrest",
+        "neon",
+        "supabase"
+    ],
+    "authors": [
+        {
+            "name": "Peter Bendel",
+            "email": "bodobolero @ gmail.com"
+        }
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Bodobolero/PostgrestClient.git"
+    },
+    "frameworks": [
+        "arduino"
+    ],
+    "platforms": [
+        "espressif32",
+        "espressif8266",
+        "raspberrypi"
+    ],
+    "dependencies": [
+        "bblanchon/ArduinoJson",
+        "Densaugeo/base64_arduino"
+    ]
+}
