@@ -53,6 +53,7 @@ void setup()
         while (true)
             ;
     }
+    delay(10000);
     // watchdog to make sure the script can run unattended 7x24 for many days
     // watchdog resets board after max_timeout if it is not kicked
     // so that we start all over
@@ -61,36 +62,37 @@ void setup()
     // attempt to connect to WiFi network:
     while (status != WL_CONNECTED)
     {
-        // wait 10 seconds before trying to connect
-        delay(10000);
         Serial.print("Attempting to connect to SSID: ");
         Serial.println(ssid);
         // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
         status = WiFi.begin(ssid, pass);
+        if (status != WL_CONNECTED)
+        {
+            delay(10000);
+        }
     }
     Serial.println("Connected to WiFi");
+    mbed::Watchdog::get_instance().kick(); // Reset the watchdog timer
 
     // init Temperature and Humidity sensor
     Wire.begin();
+    mbed::Watchdog::get_instance().kick(); // Reset the watchdog timer
     dht.begin();
+    mbed::Watchdog::get_instance().stop(); // stop the timer to avoid reset while waiting for signin
 
     Serial.println("\nSigning in with email in Neon auth...");
-    const char *errorMessage = "not yet signed in";
-    while (errorMessage)
+    const char *errorMessage = pgClient.signIn(USER_EMAIL, USER_PASSWORD);
+    if (errorMessage)
     {
-        errorMessage = pgClient.signIn(USER_EMAIL, USER_PASSWORD);
-        if (errorMessage)
-        {
-            Serial.print("Sign in failed: ");
-            Serial.println(errorMessage);
-            delay(10000); // wait 10 seconds before retrying
-        }
-        else
-        {
-            Serial.println("Sign in successful.");
-            pgClient.printJwt();
-        }
+        Serial.print("Sign in failed: ");
+        Serial.println(errorMessage);
     }
+    else
+    {
+        Serial.println("Sign in successful.");
+        pgClient.printJwt();
+    }
+    mbed::Watchdog::get_instance().start(); // restart the watchdog timer
 }
 
 void loop()
@@ -151,7 +153,7 @@ void checkAndPrintWiFiStatus()
     {
         WiFi.disconnect();
         // wait 10 seconds before trying to connect again
-        delay(10000);
+        delay(1000);
         Serial.print("Lost connection - attempting to re-connect to SSID: ");
         Serial.println(ssid);
         // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
