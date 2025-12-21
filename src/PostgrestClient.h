@@ -165,7 +165,7 @@ public:
         response.clear();
         request["email"] = email;
         request["password"] = password;
-        const char *err = postJsonAuth("/sign-in/email", 20000, true);
+        const char *err = postJsonAuth("/sign-in/email", 40000, true);
         if (err)
             return err;
 
@@ -180,7 +180,7 @@ public:
         // Serial.println(_sessionCookie);
 
         // Second request: GET /get-session with Cookie header to retrieve JWT from header
-        const char *err2 = getSessionJWTWithCookie(20000);
+        const char *err2 = getSessionJWTWithCookie(40000);
         if (err2)
             return err2;
 
