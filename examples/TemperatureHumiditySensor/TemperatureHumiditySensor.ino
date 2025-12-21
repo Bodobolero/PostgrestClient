@@ -53,6 +53,10 @@ void setup()
         while (true)
             ;
     }
+    // watchdog to make sure the script can run unattended 7x24 for many days
+    // watchdog resets board after max_timeout if it is not kicked
+    // so that we start all over
+    mbed::Watchdog::get_instance().start();
 
     // attempt to connect to WiFi network:
     while (status != WL_CONNECTED)
@@ -87,11 +91,6 @@ void setup()
             pgClient.printJwt();
         }
     }
-
-    // watchdog to make sure the script can run unattended 7x24 for many days
-    // watchdog resets board after max_timeout if it is not kicked
-    // so that we start all over
-    mbed::Watchdog::get_instance().start();
 }
 
 void loop()
