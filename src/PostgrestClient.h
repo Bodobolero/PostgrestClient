@@ -20,12 +20,12 @@ class PostgrestClient
 {
 public:
     // Assuming the following Neon URLs, replace with your own as neeeded
-    // NEON_AUTH_URL    "https://ep-steep-wind-aghq5svk.neonauth.c-2.eu-central-1.aws.neon.tech/neondb/auth"
-    // NEON_DATA_API_URL "https://ep-steep-wind-aghq5svk.apirest.c-2.eu-central-1.aws.neon.tech/neondb/rest/v1/"
+    // NEON_AUTH_URL    "https://ep-steep-wind-refactored.neonauth.c-2.eu-central-1.aws.neon.tech/neondb/auth"
+    // NEON_DATA_API_URL "https://ep-steep-wind-refactored.apirest.c-2.eu-central-1.aws.neon.tech/neondb/rest/v1/"
     // we need to decompose the URL into host and endpoint path for the WiFiClient as follows:
-    // authHost: "ep-steep-wind-aghq5svk.neonauth.c-2.eu-central-1.aws.neon.tech"
+    // authHost: "ep-steep-wind-refactored.neonauth.c-2.eu-central-1.aws.neon.tech"
     // authPath: "/neondb/auth"
-    // apiHost: "ep-steep-wind-aghq5svk.apirest.c-2.eu-central-1.aws.neon.tech"
+    // apiHost: "ep-steep-wind-refactored.apirest.c-2.eu-central-1.aws.neon.tech"
     // apiPath: "/neondb/rest/v1"
     // all paths must start with a leading '/' and end without a trailing '/'
     PostgrestClient(WiFiClient &client, const char *authHost, const char *authPath, const char *apiHost, const char *apiPath)
@@ -198,16 +198,14 @@ public:
             Serial.println(_jwtBuffer);
         else
             Serial.println("<none>");
-        Serial.print("iat: ");
-        Serial.println(_tokenIat);
-        Serial.print("exp: ");
+        Serial.print("token lifetime (s): ");
         Serial.println(_tokenExpiry);
-        Serial.print("local time iat: ");
+        Serial.print("local time when token issued: ");
         Serial.println(_internalTimeIat / 1000U);
         Serial.print("current local time: ");
         Serial.println(millis() / 1000U);
         Serial.print("token expires in (s): ");
-        Serial.println(_tokenExpiry - _tokenIat - (millis() - _internalTimeIat) / 1000U);
+        Serial.println(_tokenExpiry - (millis() - _internalTimeIat) / 1000U);
     }
 
     JsonDocument &getJsonRequest()
@@ -650,8 +648,9 @@ private:
         }
 
         // Store iat and exp and internal time (pass quoted claim names)
-        _tokenIat = jwt_get_claim_u32_scan(_jwtBuffer, "\"iat\"");
-        _tokenExpiry = jwt_get_claim_u32_scan(_jwtBuffer, "\"exp\"");
+        uint32_t tokenIat = jwt_get_claim_u32_scan(_jwtBuffer, "\"iat\"");
+        uint32_t tokenExpiry = jwt_get_claim_u32_scan(_jwtBuffer, "\"exp\"");
+        _tokenExpiry = tokenExpiry - tokenIat;
         _internalTimeIat = millis();
         _isSignedIn = true;
 
@@ -683,7 +682,7 @@ private:
         uint32_t now = _tokenIat + (uint32_t)(elapsed_ms / 1000U);
 
         // If token expires within the next 60 seconds, refresh it
-        if (now + 60U >= _tokenExpiry)
+        if (elapsed_ms / 1000U + 60U >= _tokenExpiry)
         {
             if (!_email || !_password)
                 return "no credentials to refresh token";
@@ -707,9 +706,8 @@ private:
     // session cookie captured from Set-Cookie header
     char _sessionCookie[MAX_JWT_LENGTH];
     // JWT token and expiry time
-    uint32_t _tokenExpiry;     // "exp" from JWT
-    uint32_t _tokenIat;        // "iat" from JWT
-    uint32_t _internalTimeIat; // millis() at time of _tokenIat
+    uint32_t _tokenExpiry;     // token lifetime in seconds
+    uint32_t _internalTimeIat; // millis() at time token was issued
     char _jwtBuffer[MAX_JWT_LENGTH];
 
     // payload for requests and responses - one at a time

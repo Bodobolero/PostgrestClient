@@ -9,14 +9,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source the previous sign-in script (it should export JWT)
-source "$SCRIPT_DIR/03_neon_auth_signin_with_email.sh"
+source "$SCRIPT_DIR/03_auth_signin_with_email.sh"
 
 if [[ -z "${JWT:-}" ]]; then
   echo "JWT was not set by sign-in script" >&2
   exit 1
 fi
 
-curl -k -i -X GET "${NEON_DATA_API_URL%/}/sensorvalues" \
+curl -k -i -X POST "${NEON_DATA_API_URL%/}/sensorvalues" \
   -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -H "Authorization: Bearer ${JWT}" 
+  -H "Authorization: Bearer ${JWT}" \
+  -d '{
+    "sensor_name": "temperature",
+    "sensor_value": 21.5
+  }'
