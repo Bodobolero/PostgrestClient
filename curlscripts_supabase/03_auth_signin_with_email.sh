@@ -8,18 +8,20 @@ source "$SCRIPT_DIR/.env"
 set +a
 
 # 1) Sign in and capture headers
-RESP_HEADERS="$(mktemp)"
 RESP_BODY="$(mktemp)"
-trap 'rm -f "$RESP_HEADERS" "$RESP_BODY"' EXIT
+trap 'rm -f "$RESP_BODY"' EXIT
 
-curl --http1.1 -sS -D "$RESP_HEADERS" -o "$RESP_BODY"\
+curl --http1.1 -sS -o "$RESP_BODY"\
   -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
   -H "apikey: ${ANON_PUBLIC_KEY}" \
   -d "{
     \"email\": \"${USER_EMAIL}\",
     \"password\": \"${USER_PASSWORD}\"
   }" \
   "${SUPABASE_AUTH_URL}/token?grant_type=password"
+
+#cat "$RESP_BODY"
 
 # 2) Extract the JWT / access_token
 JWT="$(
