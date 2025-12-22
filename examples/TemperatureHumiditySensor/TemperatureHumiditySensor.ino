@@ -32,7 +32,7 @@ int status = WL_IDLE_STATUS;
 // with the IP address and port of the server
 // that you want to connect to (port 80 is default for HTTP):
 WiFiSSLClient client;
-PostgrestClient pgClient(client, AUTH_HOST, AUTH_PATH, API_HOST, API_PATH);
+NeonPostgrestClient pgClient(client, AUTH_HOST, AUTH_PATH, API_HOST, API_PATH);
 
 DHT dht(DHTTYPE); // DHT20 don't need to define Pin, uses I2C I/F
 
