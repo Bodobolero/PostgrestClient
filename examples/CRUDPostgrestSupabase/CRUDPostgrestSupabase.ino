@@ -4,7 +4,7 @@
 
 // ---------------------------------------------------------------------------------------------------------
 // This is a basic example that does not need any sensors or actuators connected to your microcontroller.
-// It only shows how to sign in to the Neon Auth service with email and password.
+// It only shows how to sign in to the Supabase Auth service with email and password.
 // Note that the signup process needs to be completed before the signin.
 // For security reasons it is recommended to do the signup and email verification NOT from the arduino device.
 // Better is to do it manually using curl or from a secure backend server.
