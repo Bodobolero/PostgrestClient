@@ -121,10 +121,10 @@ void loop()
     JsonDocument &request = pgClient.getJsonRequest();
     request.clear();
     JsonArray arr = request.to<JsonArray>();
-    JsonObject temp = arr.createNestedObject();
+    JsonObject temp = arr.add<JsonObject>();
     temp["sensor_name"] = "temperature";
     temp["sensor_value"] = temp_hum_val[1];
-    JsonObject hum = arr.createNestedObject();
+    JsonObject hum = arr.add<JsonObject>();
     hum["sensor_name"] = "humidity";
     hum["sensor_value"] = temp_hum_val[0];
     const char *errorMessage = pgClient.doPost("/sensorvalues");

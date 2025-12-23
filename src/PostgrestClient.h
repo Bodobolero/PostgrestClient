@@ -16,6 +16,14 @@
 
 uint32_t jwt_get_claim_u32_scan(const char *jwt, const char *claim); // see implementation below
 
+/**
+ * @brief A base class for PostgrestClient implementations for different vendors.
+ * Postgrest is a PostgreSQL extension providing a RESTful API interface to Postgres databases.
+ * The PostgrestClient class is a lightweight client implementation for the Restful Postgrest API that
+ * can be used on Microcontroller platforms like Arduino Mbed, or ESP32/ESP8266 based boards.
+ * Prerequisites: Wifi connectivity using WiFiClient or WiFiSSLClient.
+ * Base class provides common functionality for authentication and data API interactions.
+ */
 class PostgrestClient
 {
 public:
@@ -28,23 +36,26 @@ public:
         (void)email;
         (void)password;
         (void)timeout;
-        return "not implemented in vendor specific subclass";
+        return "not implemented in base class";
     }
     virtual const char *verifyEmail(const char *email, const char *otp, unsigned long timeout = 20000)
     {
         (void)email;
         (void)otp;
         (void)timeout;
-        return "not implemented in vendor specific subclass";
+        return "not implemented in base class";
     }
     virtual const char *signIn(const char *email, const char *password)
     {
         (void)email;
         (void)password;
-        return "not implemented in vendor specific subclass";
+        return "not implemented in base class";
     }
 
-    // Print current JWT and its timestamps to Serial for debugging
+    /**
+     * @brief Print current JWT and its timestamps to Serial for debugging
+     * Useful for debugging Auth problems or token expiration.
+     */
     virtual void printJwt()
     {
         Serial.print("JWT: ");
@@ -62,17 +73,42 @@ public:
         Serial.println(_tokenExpiry - (millis() - _internalTimeIat) / 1000U);
     }
 
+    /**
+     * @brief Get the Json Request object (ArduinoJson JsonDocument) to set the REST API request
+     * payload according to the
+     * Postgrest documentation (see https://docs.postgrest.org/en/stable/references/api/tables_views.html)
+     *
+     * @return JsonDocument&
+     */
     JsonDocument &getJsonRequest()
     {
         return request;
     }
 
+    /**
+     * @brief Get the Json Result object (ArduinoJson JsonDocument).
+     * Retrieve the REST API response according to the Postgrest documentation
+     * (see https://docs.postgrest.org/en/stable/references/api/tables_views.html)
+     *
+     * @return JsonDocument&
+     */
     JsonDocument &getJsonResult()
     {
         return response;
     }
 
-    // Common data API methods (shared across vendors)
+    /**
+     * @brief query the given route and return results in getJsonResult()
+     * all routes must start with a leading '/'
+     * route can be like
+     * retrieve all items: "/item",
+     * retrieve all people younger than 13: "/people?age=lt.13"
+     * see https://docs.postgrest.org/en/stable/references/api/tables_views.html
+     *
+     * @param route
+     * @param timeout
+     * @return const char* nullptr on success, error message in case of failure
+     */
     const char *doGet(const char *route, unsigned long timeout = 20000)
     {
         if (!_isSignedIn)
@@ -90,6 +126,16 @@ public:
         return nullptr;
     }
 
+    /**
+     * @brief insert tuples
+     * post the given route with payload from getJsonRequest() and return results in getJsonResult()
+     * all routes must start with a leading '/'.
+     * route can be like insert new item: "/item"
+     * see https://docs.postgrest.org/en/stable/references/api/tables_views.html
+     * @param route
+     * @param timeout
+     * @return const char* nullptr on success, error message in case of failure
+     */
     const char *doPost(const char *route, unsigned long timeout = 20000)
     {
         if (!_isSignedIn)
@@ -105,6 +151,17 @@ public:
         return nullptr;
     }
 
+    /**
+     * @brief update tuples
+     * patch the given route with payload from getJsonRequest() and return results in getJsonResult()
+     * all routes must start with a leading '/'.
+     * route can be like
+     * update item with id=5: "/item?id=eq.5"
+     * see https://docs.postgrest.org/en/stable/references/api/tables_views.html
+     * @param route
+     * @param timeout
+     * @return const char* nullptr on success, error message in case of failure
+     */
     const char *doPatch(const char *route, unsigned long timeout = 20000)
     {
         if (!_isSignedIn)
@@ -120,6 +177,16 @@ public:
         return nullptr;
     }
 
+    /**
+     * @brief delete tuples
+     * delete the given route and return results in getJsonResult()
+     * all routes must start with a leading '/'.
+     * route can be like delete item with id=5: "/item?id=eq.5"
+     * see https://docs.postgrest.org/en/stable/references/api/tables_views.html
+     * @param route
+     * @param timeout
+     * @return const char* nullptr on success, error message in case of failure
+     */
     const char *doDelete(const char *route, unsigned long timeout = 20000)
     {
         if (!_isSignedIn)
@@ -175,15 +242,20 @@ protected:
         return nullptr;
     }
 
-    // common helper to send requests to the data API
-    // Hook for vendor-specific headers (e.g. Supabase needs `apikey:`)
+    /**
+     * @brief common helper to send requests to the data API
+     * Hook for vendor-specific headers (e.g. Supabase needs `apikey:`)
+     */
     virtual void addVendorSpecificHeaders()
     {
         // default: no vendor specific headers
     }
 
-    // common helper to read responses in the data API
-    // Hook for vendor-specific respones (e.g. Supabase sends an additional line with the length of the json payload
+    /**
+     * @brief common helper to read responses in the data API
+     * Hook for vendor-specific respones (e.g. Supabase sends an additional line
+     * with the length of the json payload
+     */
     virtual void readVendorSpecificResponse()
     {
         // default: no vendor specific headers
@@ -292,10 +364,31 @@ protected:
     JsonDocument response;
 };
 
-// Neon specific subclass
+/**
+ * @brief A PostgrestClient subclass for Neon-specific authentication and data API interactions.
+ * See neon.tech for more information. Search doc for Data API, Neon Auth and RLS.
+ */
 class NeonPostgrestClient : public PostgrestClient
 {
 public:
+    /**
+     * Constructor for NeonPostgrestClient
+     *
+     * @param client Reference to a WiFiClient instance for network communication
+     * @param authHost Hostname for the Neon Auth service
+     * @param authPath Endpoint path for the Neon Auth service
+     * @param apiHost Hostname for the Neon Data API service
+     * @param apiPath Endpoint path for the Neon Data API service
+     * Assuming the following Neon URLs, replace with your own as neeeded
+     * NEON_AUTH_URL    "https://ep-steep-wind-refactored.neonauth.c-2.eu-central-1.aws.neon.tech/neondb/auth"
+     * NEON_DATA_API_URL "https://ep-steep-wind-refactored.apirest.c-2.eu-central-1.aws.neon.tech/neondb/rest/v1/"
+     * we need to decompose the URL into host and endpoint path for the WiFiClient as follows:
+     * authHost: "ep-steep-wind-refactored.neonauth.c-2.eu-central-1.aws.neon.tech"
+     * authPath: "/neondb/auth"
+     * apiHost: "ep-steep-wind-refactored.apirest.c-2.eu-central-1.aws.neon.tech"
+     * apiPath: "/neondb/rest/v1"
+     * all paths must start with a leading '/' and end without a trailing '/'
+     */
     NeonPostgrestClient(WiFiClient &client, const char *authHost, const char *authPath, const char *apiHost, const char *apiPath)
         : PostgrestClient(client)
     {
@@ -314,7 +407,31 @@ public:
         response.clear();
     }
 
-    // Implement Neon-specific auth flows
+    /**
+     * @brief Sign up a new user with name, email and password
+     *
+     * @param name User's full name
+     * @param email User's email address
+     * @param password User's password
+     * @param timeout Maximum time in milliseconds to wait for response
+     *
+     * @return nullptr on success, error message in case of failure
+     * Note: it is recommended to to the sign up NOT from the arduino device.
+     * Better is to do it manually using curl or from a secure backend server.
+     * Curl example:
+     *
+     * curl -i -X POST \
+     * "<NEON_AUTH_URL>/email-otp/verify-email" \
+     * -H "Content-Type: application/json" \
+     * -H "Accept: application/json" \
+     * -H "Origin: https://example.com" \
+     * -d '{
+     * "email": "you@your.domain",
+     * "password": "your_very_secure_password",
+     * "name": "Your Name"
+     * }'
+     *
+     */
     const char *signUp(const char *name, const char *email, const char *password, unsigned long timeout = 20000) override
     {
         request.clear();
@@ -344,6 +461,27 @@ public:
         return nullptr;
     }
 
+    /**
+     * @brief Verify email using OTP code sent to the user's email address
+     *
+     * @param email User's email address
+     * @param otp One-time password code received via email
+     * @param timeout Maximum time in milliseconds to wait for response
+     *
+     * @return nullptr on success, error message in case of failure
+     * Note: it is recommended to to the email verification NOT from the arduino device.
+     * Better is to do it manually using curl or from a secure backend server.
+     * Curl example:
+     * curl -i -X POST \
+     * "<NEON_AUTH_URL>/email-otp/verify-email" \
+     * -H "Content-Type: application/json" \
+     * -H "Accept: application/json" \
+     * -H "Origin: https://example.com" \
+     * -d '{
+     * "email": "peter@familie-bendel.de",
+     * "otp": "293185"
+     * }'
+     */
     const char *verifyEmail(const char *email, const char *otp, unsigned long timeout = 20000) override
     {
         request.clear();
@@ -631,10 +769,33 @@ protected:
     }
 };
 
-// Supabase specific subclass (templates)
+/**
+ * @brief  A PostgrestClient subclass for Supabase-specific authentication and data API interactions.
+ * See supabase.com for more information. Search doc for Postgrest / Rest / Supabase Auth and RLS.
+ */
 class SupabasePostgrestClient : public PostgrestClient
 {
 public:
+    /**
+     * Constructor for SupabasePostgrestClient
+     * @param client Reference to a WiFiClient object for network communication
+     * @param authHost  The host URL for the authentication service
+     * @param authPath  The path for the authentication endpoint
+     * @param apiHost   The host URL for the data API service
+     * @param apiPath   The path for the data API endpoint
+     * @param anonymousPublicApiKey The anonymous public API key for Supabase
+     * Assuming the following Supabase URLs, replace with your own as neeeded
+     *  SUPABASE_AUTH_URL = "https://yourproject.supabase.co/auth/v1/"
+     * SUPABASE_DATA_API_URL = "https://yourproject.supabase.co/rest/v1/"
+     * we need to decompose the URL into host and endpoint path for the WiFiClient as follows:
+     * authHost: "yourproject.supabase.co"
+     * authPath: "/auth/v1"
+     * apiHost: "yourproject.supabase.co"
+     * apiPath: "/rest/v1"
+     * all paths must start with a leading '/' and end without a trailing '/'
+     * api key see https://supabase.com/dashboard/project/<yourproject>/settings/api-keys
+     * ANON_PUBLIC_KEY = "your_supabase_project_anon_public_key_here"
+     */
     SupabasePostgrestClient(WiFiClient &client, const char *authHost, const char *authPath, const char *apiHost, const char *apiPath, const char *anonymousPublicApiKey)
         : PostgrestClient(client)
     {
@@ -653,7 +814,16 @@ public:
         response.clear();
     }
 
-    // empty templates to be implemented for Supabase
+    /**
+     * @brief Signup a new user with name, email and password
+     * @TODO not implemented yet for Supabase, use curl scripts provided in curlscripts_supabase/ instead
+     *
+     * @param name
+     * @param email
+     * @param password
+     * @param timeout
+     * @return const char* error message or nullptr on success
+     */
     const char *signUp(const char *name, const char *email, const char *password, unsigned long timeout = 20000) override
     {
         (void)name;
@@ -662,6 +832,15 @@ public:
         (void)timeout;
         return "not implemented for supabase, use curl scripts provided in curlscripts_supabase/";
     }
+
+    /**
+     * @brief Verify email using OTP code sent to the user's email address
+     * @TODO not implemented yet for Supabase, use curl scripts provided in curlscripts_supabase/ instead
+     * @param email
+     * @param otp
+     * @param timeout
+     * @return const char* error message or nullptr on success
+     */
     const char *verifyEmail(const char *email, const char *otp, unsigned long timeout = 20000) override
     {
         (void)email;
@@ -669,6 +848,15 @@ public:
         (void)timeout;
         return "not implemented for supabase, use curl scripts provided in curlscripts_supabase/";
     }
+
+    /**
+     * @brief Sign in an existing user with email and password
+     * Uses Supabase auth endpoint "<SUPABASE_AUTH_URL>/token?grant_type=password"
+     *
+     * @param email
+     * @param password
+     * @return const char* 0 or error message
+     */
     const char *signIn(const char *email, const char *password) override
     {
         if (!_client.connect(_authHost, 443))
@@ -772,10 +960,16 @@ public:
     }
 
 private:
+    /**
+     * @brief Supabase-specific member: anonymous public API key for adding to headers
+     * all requests to Supabase services require this header
+     */
     const char *_apiKey;
 
 protected:
-    // Add Supabase-specific headers (anonymous public API key)
+    /**
+     * @brief  Add Supabase-specific headers (anonymous public API key)
+     */
     void addVendorSpecificHeaders() override
     {
         if (_apiKey && _apiKey[0])
@@ -788,7 +982,7 @@ protected:
     // skip line in response before json payload
     void readVendorSpecificResponse() override
     {
-        size_t bytes_read = _client.readBytesUntil('\n', _status, sizeof(_status) - 1);
+        _client.readBytesUntil('\n', _status, sizeof(_status) - 1);
     }
 };
 
