@@ -478,7 +478,7 @@ public:
      * -H "Accept: application/json" \
      * -H "Origin: https://example.com" \
      * -d '{
-     * "email": "peter@familie-bendel.de",
+     * "email": "eingriffe_lerche.1v@icloud.com",
      * "otp": "293185"
      * }'
      */
