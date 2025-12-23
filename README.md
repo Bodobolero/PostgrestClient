@@ -10,6 +10,35 @@ This library provides a thin client wrapper using ArduinoJson to make it easy to
 Use this to store sensor data directly in a PostgreSQL database without a middleman server such as Home Assistant.
 You can also read values from the database and use them to control actuators — any application that can write to the database can trigger actions on your microcontroller project.
 
+- [PostgrestClient library](#postgrestclient-library)
+  - [Important note](#important-note)
+  - [Important security note](#important-security-note)
+  - [Usage overview](#usage-overview)
+    - [Example PostgreSQL table used in usage overview](#example-postgresql-table-used-in-usage-overview)
+    - [Instantiate an instance of the PostgrestClient](#instantiate-an-instance-of-the-postgrestclient)
+    - [Connect to WiFi and authenticate with the PostgreSQL authentication server to generate a JWT](#connect-to-wifi-and-authenticate-with-the-postgresql-authentication-server-to-generate-a-jwt)
+    - [Insert sensor values](#insert-sensor-values)
+    - [Query / retrieve sensor values](#query--retrieve-sensor-values)
+    - [Update values](#update-values)
+    - [Delete rows based on search filter](#delete-rows-based-on-search-filter)
+  - [Vendor support](#vendor-support)
+  - [Prerequisites](#prerequisites)
+    - [PostgreSQL with PostgREST extension](#postgresql-with-postgrest-extension)
+    - [WiFi](#wifi)
+    - [ArduinoJson library (bblanchon/ArduinoJson)](#arduinojson-library-bblanchonarduinojson)
+    - [base64 library (Densaugeo/base64\_arduino)](#base64-library-densaugeobase64_arduino)
+  - [API reference](#api-reference)
+  - [List of examples](#list-of-examples)
+    - [Examples directory](#examples-directory)
+    - [Directory curlscripts\_neon](#directory-curlscripts_neon)
+    - [Directory curlscripts\_supabase](#directory-curlscripts_supabase)
+    - [Database schema and RLS policies used in the examples](#database-schema-and-rls-policies-used-in-the-examples)
+      - [Neon](#neon)
+      - [Supabase](#supabase)
+  - [Enable RLS](#enable-rls)
+  - [Enabling PostgREST, Neon Auth and RLS on Neon](#enabling-postgrest-neon-auth-and-rls-on-neon)
+  - [Enabling PostgREST, Supabase Auth and RLS on Supabase](#enabling-postgrest-supabase-auth-and-rls-on-supabase)
+
 ## Important note
 
 To allow different WiFi client implementations the library does not depend on a specific WiFi client library.
