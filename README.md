@@ -38,6 +38,7 @@ You can also read values from the database and use them to control actuators —
   - [Enable RLS](#enable-rls)
   - [Enabling PostgREST, Neon Auth and RLS on Neon](#enabling-postgrest-neon-auth-and-rls-on-neon)
   - [Enabling PostgREST, Supabase Auth and RLS on Supabase](#enabling-postgrest-supabase-auth-and-rls-on-supabase)
+  - [Contributing](#contributing)
 
 ## Important note
 
@@ -348,5 +349,11 @@ CREATE POLICY "Own sensor data only" ON "sensorvalues" AS PERMISSIVE FOR ALL TO 
 
 - Either use the Supabse console SQL Editor or any database client to create your database schema, GRANTS to RLS roles like "authenticated" and RLS policy. An example schema and RLS policies used in the examples is given above.
 
+## Contributing
 
+You can open issues or suggest pull requests from a fork, however I make no promises to fix your issues
+or review/merge your pull requests.
+This is a hobby project maintained in my free time on a best effort basis.
+
+This library is published to the Arduino library manager and is automatically installed by the Arduino IDE, see https://github.com/arduino/library-registry/pull/7461 and https://downloads.arduino.cc/libraries/library_index.json
 
