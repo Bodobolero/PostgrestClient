@@ -22,9 +22,6 @@ char pass[] = SECRET_PASS; // your network password (use for WPA, or use as key 
 
 int status = WL_IDLE_STATUS;
 
-// Initialize the Ethernet client library
-// with the IP address and port of the server
-// that you want to connect to (port 80 is default for HTTP):
 WiFiSSLClient client;
 NeonPostgrestClient pgClient(client, AUTH_HOST, AUTH_PATH, API_HOST, API_PATH);
 
