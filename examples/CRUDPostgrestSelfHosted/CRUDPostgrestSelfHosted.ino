@@ -22,7 +22,11 @@ char pass[] = SECRET_PASS; // your network password (use for WPA, or use as key 
 
 int status = WL_IDLE_STATUS;
 
-WiFiSSLClient client;
+// we don't use a reverse proxy like NGINX which supports https in front of Postgrest
+// so we need to use HTTP instead of HTTPS
+// WiFiSSLClient client;
+WiFiClient client;
+
 SelfHostedPostgrestClient pgClient(client, AUTH_HOST, AUTH_PATH, API_HOST, API_PATH);
 
 void setup()

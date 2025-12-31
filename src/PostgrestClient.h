@@ -261,9 +261,22 @@ protected:
         // default: no vendor specific headers
     }
 
+    /**
+     * @brief Connect to specified host.
+     * Can be overridden by subclass to use another port.
+     * @param host the host to connect to
+     *
+     * @return true connection successful
+     * @return false connection failed
+     */
+    virtual bool connectToHost(const char *host)
+    {
+        return _client.connect(host, 443);
+    }
+
     const char *invokeDataAPI(const char *verb, const char *pathSuffix, unsigned long timeout = 20000, bool expectJsonResult = false)
     {
-        if (!_client.connect(_apiHost, 443))
+        if (!connectToHost(_apiHost))
         {
             return "cannot connect to data api host over Wifi";
         }
@@ -546,7 +559,7 @@ private:
     // Neon-specific helpers (not virtual)
     const char *postJsonAuth(const char *pathSuffix, unsigned long timeout, bool setCookie = false)
     {
-        if (!_client.connect(_authHost, 443))
+        if (!connectToHost(_authHost))
         {
             return "cannot connect to auth host over Wifi";
         }
@@ -655,7 +668,7 @@ private:
         if (_sessionCookie[0] == '\0')
             return "empty session token";
 
-        if (!_client.connect(_authHost, 443))
+        if (!connectToHost(_authHost))
         {
             return "cannot connect to auth host over Wifi";
         }
@@ -859,7 +872,7 @@ public:
      */
     const char *signIn(const char *email, const char *password) override
     {
-        if (!_client.connect(_authHost, 443))
+        if (!connectToHost(_authHost))
         {
             return "cannot connect to auth host over Wifi";
         }
@@ -1055,6 +1068,11 @@ public:
         return "not implemented for supabase, use curl scripts provided in curlscripts_supabase/";
     }
 
+    bool connectToHost(const char *host) override
+    {
+        return _client.connect(host, 3000);
+    }
+
     /**
      * @brief Sign in an existing user with email and password
      * Uses Supabase auth endpoint "<SUPABASE_AUTH_URL>/token?grant_type=password"
@@ -1065,7 +1083,7 @@ public:
      */
     const char *signIn(const char *email, const char *password) override
     {
-        if (!_client.connect(_authHost, 443))
+        if (!connectToHost(_authHost))
         {
             return "cannot connect to auth host over Wifi";
         }
