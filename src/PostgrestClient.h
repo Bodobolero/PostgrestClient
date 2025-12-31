@@ -986,6 +986,195 @@ protected:
     }
 };
 
+/**
+ * @brief  A PostgrestClient subclass for a self-hosted PostgreSql/Postgrest interactions.
+ * Note that this client assumes an opinionated setup of the Postgrest configuration
+ * and schema/functions in schema auth as given in the curlscripts_selfhosted folder's README.md
+ * See supabase.com for more information. Search doc for Postgrest / Rest / Supabase Auth and RLS.
+ */
+class SelfHostedPostgrestClient : public PostgrestClient
+{
+public:
+    /**
+     * Constructor for SelfHostedPostgrestClient
+     * @param client Reference to a WiFiClient object for network communication
+     * @param authHost  The host URL for the authentication service
+     * @param authPath  The path for the authentication endpoint
+     * @param apiHost   The host URL for the data API service
+     * @param apiPath   The path for the data API endpoint
+     */
+    SelfHostedPostgrestClient(WiFiClient &client, const char *authHost, const char *authPath, const char *apiHost, const char *apiPath)
+        : PostgrestClient(client)
+    {
+        _authHost = authHost;
+        _authPath = authPath;
+        _apiHost = apiHost;
+        _apiPath = apiPath;
+        _email = nullptr;
+        _password = nullptr;
+        _isSignedIn = false;
+        _tokenExpiry = 0;
+        _internalTimeIat = 0;
+        _jwtBuffer[0] = '\0';
+        request.clear();
+        response.clear();
+    }
+
+    /**
+     * @brief Signup a new user with name, email and password
+     * @TODO not implemented yet for Supabase, use curl scripts provided in curlscripts_supabase/ instead
+     *
+     * @param name
+     * @param email
+     * @param password
+     * @param timeout
+     * @return const char* error message or nullptr on success
+     */
+    const char *signUp(const char *name, const char *email, const char *password, unsigned long timeout = 20000) override
+    {
+        (void)name;
+        (void)email;
+        (void)password;
+        (void)timeout;
+        return "not implemented for supabase, use curl scripts provided in curlscripts_supabase/";
+    }
+
+    /**
+     * @brief Verify email using OTP code sent to the user's email address
+     * @TODO not implemented yet for Supabase, use curl scripts provided in curlscripts_supabase/ instead
+     * @param email
+     * @param otp
+     * @param timeout
+     * @return const char* error message or nullptr on success
+     */
+    const char *verifyEmail(const char *email, const char *otp, unsigned long timeout = 20000) override
+    {
+        (void)email;
+        (void)otp;
+        (void)timeout;
+        return "not implemented for supabase, use curl scripts provided in curlscripts_supabase/";
+    }
+
+    /**
+     * @brief Sign in an existing user with email and password
+     * Uses Supabase auth endpoint "<SUPABASE_AUTH_URL>/token?grant_type=password"
+     *
+     * @param email
+     * @param password
+     * @return const char* 0 or error message
+     */
+    const char *signIn(const char *email, const char *password) override
+    {
+        if (!_client.connect(_authHost, 443))
+        {
+            return "cannot connect to auth host over Wifi";
+        }
+
+        _email = email;
+        _password = password;
+
+        request.clear();
+        response.clear();
+        request["email"] = email;
+        request["password"] = password;
+
+        _client.print("POST ");
+        _client.print(_authPath);
+        _client.print("/rpc/login");
+        _client.println(" HTTP/1.1");
+        _client.print("Host: ");
+        _client.println(_authHost);
+        _client.println("Content-Type: application/json");
+        _client.println("Accept: application/json");
+        _client.println("Content-Profile: auth");
+        _client.print("Content-Length: ");
+        size_t length = measureJson(request);
+        _client.print(length);
+        _client.print("\r\n\r\n");
+
+        size_t written = serializeJson(request, _client);
+        if (written != length)
+        {
+            _client.stop();
+            return "payload serialization error";
+        }
+        _client.flush();
+
+        unsigned long ms = millis();
+        while (!_client.available() && millis() - ms < 20000)
+        {
+            delay(0);
+        }
+
+        if (!_client.available())
+        {
+            _client.stop();
+            return "request timed out";
+        }
+
+        size_t bytes_read = _client.readBytesUntil('\n', _status, sizeof(_status) - 1);
+        _status[bytes_read] = 0;
+        // Serial.println(_status);
+        int status_code = 0;
+        if (bytes_read >= 12)
+            sscanf(_status + 9, "%3d", &status_code);
+        if (status_code < 200 || status_code >= 300)
+        {
+            _client.stop();
+            return _status;
+        }
+
+        char endOfHeaders[] = "\r\n\r\n";
+        if (!_client.find(endOfHeaders))
+        {
+            _client.stop();
+            return "Invalid response";
+        }
+
+        readVendorSpecificResponse();
+
+        DeserializationError err = deserializeJson(response, _client);
+        if (err)
+        {
+            _client.stop();
+            return err.c_str();
+        }
+        const char *jwt = response["token"].as<const char *>();
+        if (!jwt)
+        {
+            _client.stop();
+            return "no access_token in sign-in response";
+        }
+        size_t jlen = strnlen(jwt, MAX_JWT_LENGTH);
+        if (jlen == 0 || jlen >= MAX_JWT_LENGTH)
+        {
+            _client.stop();
+            return "invalid access_token length";
+        }
+        memmove(_jwtBuffer, jwt, jlen);
+        _jwtBuffer[jlen] = '\0';
+        uint32_t tokenIat = jwt_get_claim_u32_scan(_jwtBuffer, "\"iat\"");
+        uint32_t tokenExpiry = jwt_get_claim_u32_scan(_jwtBuffer, "\"exp\"");
+        _tokenExpiry = tokenExpiry - tokenIat;
+        _internalTimeIat = millis();
+        _isSignedIn = true;
+
+        request.clear();
+        response.clear();
+
+        _client.stop();
+        return nullptr;
+    }
+
+private:
+protected:
+    // // skip line in response before json payload
+    // void readVendorSpecificResponse() override
+    // {
+    //     _client.readBytesUntil('\n', _status, sizeof(_status) - 1);
+    // }
+};
+
 static const char *
 find_char_n(const char *s, size_t n, char c)
 {

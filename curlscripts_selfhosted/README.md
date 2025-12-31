@@ -6,6 +6,13 @@ The example was tested on Ubuntu 24.04 LTS on x86-64 on a server in home network
 
 Adjust all settings to your own self-hosted environment (e.g. use your own server's IP address).
 
+## Security Alert
+
+PostgREST itself serves plain HTTP. The standard, secure way to add HTTPS is to put it behind a TLS-terminating reverse proxy (nginx or Caddy) and bind PostgREST to 127.0.0.1 only.
+
+The setup below doesn't use a reverse proxy and binds PostGrest to 0.0.0.0 making the insecure HTTP port available within the network.
+This is acceptable for a home Wifi but shouldn't be used for production.
+
 ## Install self-hosted postgres on  homeserver natively (Deban apt package)
 
 ```bash
