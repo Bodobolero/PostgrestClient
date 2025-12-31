@@ -27,7 +27,7 @@ int status = WL_IDLE_STATUS;
 // WiFiSSLClient client;
 WiFiClient client;
 
-SelfHostedPostgrestClient pgClient(client, AUTH_HOST, AUTH_PATH, API_HOST, API_PATH);
+SelfHostedPostgrestClient pgClient(client, AUTH_HOST, AUTH_PATH, API_HOST, API_PATH, POSTGREST_PORT);
 
 void setup()
 {

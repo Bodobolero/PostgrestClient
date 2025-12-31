@@ -4,10 +4,11 @@
 #define SECRET_SSID "yourWifiSSID"     // your network SSID (name)
 #define SECRET_PASS "yourWifiPassword" // your network password (use for WPA, or use as key for WEP)
 
-#define AUTH_HOST "192.168.178.90" // port 3000 is hard-coded in client and must not be specified here
+#define AUTH_HOST "192.168.178.90" // port 3000 specified below
 #define AUTH_PATH ""
-#define API_HOST "192.168.178.90" // port 3000 is hard-coded in client and must not be specified here
+#define API_HOST "192.168.178.90" // port 3000 specified below
 #define API_PATH ""
+#define POSTGREST_PORT 3000
 
 // valid email that you own - recommended to use "Apple hide my email" or other throw-away email address
 #define USER_EMAIL "alice@example.com"

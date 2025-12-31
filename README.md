@@ -32,6 +32,7 @@ You can also read values from the database and use them to control actuators —
     - [Examples directory](#examples-directory)
     - [Directory curlscripts\_neon](#directory-curlscripts_neon)
     - [Directory curlscripts\_supabase](#directory-curlscripts_supabase)
+    - [Directory curlscripts\_selfhosted](#directory-curlscripts_selfhosted)
     - [Database schema and RLS policies used in the examples](#database-schema-and-rls-policies-used-in-the-examples)
       - [Neon](#neon)
       - [Supabase](#supabase)
@@ -156,6 +157,7 @@ This  library currently provides specific subclasses for
 
 - Neon DBaaS (neon.com) with Data API and RLS enabled
 - Supabase DBaaS (supabase.com) with PostgREST and RLS enabled
+- self-hosted PostgreSQL with self-hosted Postgrest app server (see [curlscripts_selfhosted/README.md](curlscripts_selfhosted/README.md))
 
 ## Prerequisites
 
@@ -205,6 +207,7 @@ See [src/PostgrestClient.h](src/PostgrestClient.h) for the latest API reference 
 - [SignInWithEmail](examples/SignInWithEmail) — Neon sketch to sign in with email/password and generate a JWT.
 - [CRUDPostgrest](examples/CRUDPostgrest) — Neon sketch that shows a complete sign-in, Create, Read, Update, Delete flow.
 - [CRUDPostgrestSupabase](examples/CRUDPostgrestSupabase) — Supabase sketch that shows a complete sign-in, Create, Read, Update, Delete flow.
+- [CRUDPostgrestSelfHosted](examples/CRUDPostgrestSelfHosted) — sketch that shows a complete sign-in, Create, Read, Update, Delete flow - Security Alert: this uses insecure HTTP instead of HTTPS and should not be used in production.
 - [TemperatureHumiditySensor](examples/TemperatureHumiditySensor) — A realistic example that periodically reads sensor values and writes them into a PostgreSQL database. Shows how to use the Mbed watchdog to recover from connection failures for unattended operation.
 
 ### Directory curlscripts_neon
@@ -226,6 +229,17 @@ We provide bash scripts that show the same REST API invocations used by the libr
 - [curlscripts_supabase/03_auth_signin_with_email.sh](curlscripts_supabase/03_auth_signin_with_email.sh) — Sign in with email/password and generate a JWT.
 - [curlscripts_supabase/04_data_api_insert_row.sh](curlscripts_supabase/04_data_api_insert_row.sh) — Use the JWT to call the data API and insert a row.
 - [curlscripts_supabase/05_data_api_get_rows.sh](curlscripts_supabase/05_data_api_get_rows.sh) — Use the JWT to call the data API and retrieve rows.
+
+### Directory curlscripts_selfhosted
+
+Describes a setup to self-host PostgreSQL and Postgrest, deploy a simple authentication service directly in Postges and show how to use it with email/password users.
+
+We provide bash scripts that show the same REST API invocations used by the library with curl. The first script can be used to register a new user with email/password at the simple self-hosted authentication service.
+- [curlscripts_selfhosted/README.md](curlscripts_selfhosted/README.md) — Opinionated way to install and selfhost PostgreSQL and Postgrest with simple self-hosted auth on a Ubuntu server.
+- [curlscripts_selfhosted/01_auth_signup_with_email.sh](curlscripts_selfhosted/01_auth_signup_with_email.sh) — Sign up a new user at self-hosted auth with email/password.
+- [curlscripts_selfhosted/03_auth_signin_with_email.sh](curlscripts_selfhosted/03_auth_signin_with_email.sh) — Sign in with email/password and generate a JWT.
+- [curlscripts_selfhosted/04_data_api_insert_row.sh](curlscripts_selfhosted/04_data_api_insert_row.sh) — Use the JWT to call the data API and insert a row.
+- [curlscripts_selfhosted/05_data_api_get_rows.sh](curlscripts_selfhosted/05_data_api_get_rows.sh) — Use the JWT to call the data API and retrieve rows.
 
 ### Database schema and RLS policies used in the examples
 

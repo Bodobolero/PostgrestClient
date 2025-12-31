@@ -204,7 +204,7 @@ public:
 
 protected:
     // base constructor: only subclasses should create concrete clients
-    PostgrestClient(WiFiClient &client) : _client(client), _authHost(nullptr), _authPath(nullptr), _apiHost(nullptr), _apiPath(nullptr), _email(nullptr), _password(nullptr), _isSignedIn(false), _tokenExpiry(0), _internalTimeIat(0)
+    PostgrestClient(WiFiClient &client) : _client(client), _authHost(nullptr), _authPath(nullptr), _apiHost(nullptr), _port(443), _apiPath(nullptr), _email(nullptr), _password(nullptr), _isSignedIn(false), _tokenExpiry(0), _internalTimeIat(0)
     {
         request.clear();
         response.clear();
@@ -271,7 +271,7 @@ protected:
      */
     virtual bool connectToHost(const char *host)
     {
-        return _client.connect(host, 443);
+        return _client.connect(host, _port);
     }
 
     const char *invokeDataAPI(const char *verb, const char *pathSuffix, unsigned long timeout = 20000, bool expectJsonResult = false)
@@ -363,6 +363,7 @@ protected:
     const char *_authHost;
     const char *_authPath;
     const char *_apiHost;
+    uint16_t _port;
     const char *_apiPath;
     const char *_email;    // need to remember for re-signin
     const char *_password; // need to remember for re-signin
@@ -1016,12 +1017,13 @@ public:
      * @param apiHost   The host URL for the data API service
      * @param apiPath   The path for the data API endpoint
      */
-    SelfHostedPostgrestClient(WiFiClient &client, const char *authHost, const char *authPath, const char *apiHost, const char *apiPath)
+    SelfHostedPostgrestClient(WiFiClient &client, const char *authHost, const char *authPath, const char *apiHost, const char *apiPath, u_int16_t port = 3000)
         : PostgrestClient(client)
     {
         _authHost = authHost;
         _authPath = authPath;
         _apiHost = apiHost;
+        _port = port;
         _apiPath = apiPath;
         _email = nullptr;
         _password = nullptr;
@@ -1066,11 +1068,6 @@ public:
         (void)otp;
         (void)timeout;
         return "not implemented for supabase, use curl scripts provided in curlscripts_supabase/";
-    }
-
-    bool connectToHost(const char *host) override
-    {
-        return _client.connect(host, 3000);
     }
 
     /**
