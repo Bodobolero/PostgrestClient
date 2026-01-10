@@ -3,7 +3,7 @@
 // MIT License
 
 // ---------------------------------------------------------------------------------------------------------
-// This example uses a AHT20 temperature and humidity sensor and periodically perists the current
+// This example uses a DH20 temperature and humidity sensor and periodically perists the current
 // temperature and humidity in the Postgres database.
 // ---------------------------------------------------------------------------------------------------------
 
@@ -27,7 +27,8 @@ bool toggle = false;
 #include "U8x8lib.h" // OLED Display
 U8X8_SSD1306_128X64_NONAME_HW_I2C Oled(/* reset=*/U8X8_PIN_NONE);
 
-unsigned long last_calc = 0; // last time we took the time
+unsigned long last_calc = 0;   // last time we took the time
+unsigned long last_upload = 0; // last time we stored in postgres
 
 // Watchdog to make sure the script can run unattended 7x24 for many days
 // You can use the Watchdog interface to set up a hardware watchdog timer that resets
@@ -89,6 +90,7 @@ void setup()
       ;
   }
   last_calc = millis();
+  last_upload = millis();
   delay(5000);
   // watchdog to make sure the script can run unattended 7x24 for many days
   // watchdog resets board after max_timeout if it is not kicked
@@ -139,27 +141,35 @@ void loop()
       Serial.print(dht_temp);
       toggle = false;
 
-      Serial.println("\nInserting sensor values...");
-      JsonDocument &request = pgClient.getJsonRequest();
-      request.clear();
-      request["sensor_name"] = "Hobbyraum";
-      request["temperature"] = dht_temp;
-      request["humidity"] = dht_hum;
-      const char *errorMessage = pgClient.doPost("/temphum_values");
-      if (errorMessage)
-      {
-        Serial.print("Insert failed: ");
-        Serial.println(errorMessage);
-        return;
+      if ((millis() - last_upload) > 300000)
+      { // every 5 minutes - persist in postgres
+        Serial.println("\nInserting sensor values...");
+        JsonDocument &request = pgClient.getJsonRequest();
+        request.clear();
+        request["sensor_name"] = "Hobbyraum";
+        request["temperature"] = dht_temp;
+        request["humidity"] = dht_hum;
+        const char *errorMessage = pgClient.doPost("/temphum_values");
+        if (errorMessage)
+        {
+          Serial.print("Insert failed: ");
+          Serial.println(errorMessage);
+          return;
+        }
+        else
+        {
+          Serial.print("Insert successful:");
+          Serial.print(" temperature=");
+          Serial.print(dht_temp);
+          Serial.print(" humidity=");
+          Serial.println(dht_hum);
+          // only reset watchdog if we had a successful execution
+          mbed::Watchdog::get_instance().kick(); // Reset the watchdog timer
+          last_upload = millis();
+        }
       }
       else
       {
-        Serial.print("Insert successful:");
-        Serial.print(" temperature=");
-        Serial.print(dht_temp);
-        Serial.print(" humidity=");
-        Serial.println(dht_hum);
-        // only reset watchdog if we had a successful execution
         mbed::Watchdog::get_instance().kick(); // Reset the watchdog timer
       }
     }
