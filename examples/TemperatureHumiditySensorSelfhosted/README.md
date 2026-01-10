@@ -30,10 +30,6 @@ CREATE TABLE IF NOT EXISTS public.temphum_values (
     CHECK (temperature IS NOT NULL OR humidity IS NOT NULL)
 );
 
--- Helpful for per-user queries / latest readings
-CREATE INDEX IF NOT EXISTS temphum_values_user_sensor_time_idx
-  ON public.temphum_values (user_id, sensor_name, measure_time DESC);
-
 -- =========================
 -- Grants
 -- =========================
