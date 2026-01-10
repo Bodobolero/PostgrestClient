@@ -287,7 +287,10 @@ RETURNS text
 LANGUAGE sql
 STABLE
 AS $$
-  SELECT (current_setting('request.jwt.claims', true)::json ->> 'sub');
+  SELECT COALESCE(
+    current_setting('request.jwt.claim.sub', true),
+    (current_setting('request.jwt.claims', true)::json ->> 'sub')
+  );
 $$;
 
 REVOKE ALL ON FUNCTION auth.user_id() FROM public;
@@ -356,13 +359,12 @@ WITH CHECK (user_id = auth.user_id());
 -- 5) Anti-spoofing: force user_id from JWT on INSERT/UPDATE
 -- This prevents a client from writing rows for other users
 -- =========================
-CREATE OR REPLACE FUNCTION public.set_user_id_from_jwt()
+CCREATE OR REPLACE FUNCTION public.set_user_id_from_jwt()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  -- If there is no JWT (anonymous), this becomes NULL and will fail NOT NULL constraint
-  NEW.user_id := current_setting('request.jwt.claim.sub', true);
+  NEW.user_id := auth.user_id();  -- single source of truth
   RETURN NEW;
 END;
 $$;

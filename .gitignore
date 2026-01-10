@@ -60,3 +60,6 @@ arduino_secrets.h
 
 # helpers
 deploy.sh
+
+# MacOS finder garbage
+.DS_Store
