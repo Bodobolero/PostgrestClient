@@ -324,12 +324,37 @@ CREATE INDEX IF NOT EXISTS sensorvalues_user_time_idx
   ON public.sensorvalues (user_id, measure_time DESC);
 
 -- =========================
+-- Functions
+-- =========================
+CREATE OR REPLACE FUNCTION public.time_parts_berlin_timezone()
+RETURNS TABLE (
+  year   int,
+  month  int,
+  day    int,
+  hour   int,
+  minute int,
+  second int
+)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    EXTRACT(YEAR   FROM now() AT TIME ZONE 'Europe/Berlin')::int,
+    EXTRACT(MONTH  FROM now() AT TIME ZONE 'Europe/Berlin')::int,
+    EXTRACT(DAY    FROM now() AT TIME ZONE 'Europe/Berlin')::int,
+    EXTRACT(HOUR   FROM now() AT TIME ZONE 'Europe/Berlin')::int,
+    EXTRACT(MINUTE FROM now() AT TIME ZONE 'Europe/Berlin')::int,
+    EXTRACT(SECOND FROM now() AT TIME ZONE 'Europe/Berlin')::int;
+$$;
+
+-- =========================
 -- 3) Grants
 -- =========================
 
 -- Authenticated users can CRUD, but RLS restricts rows
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.actorvalues  TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sensorvalues TO authenticated;
+GRANT EXECUTE ON FUNCTION public.time_parts_berlin_timezone() TO authenticated, anonymous;
 
 -- If you want anonymous access, uncomment (RLS rules for anonymous below control what they see)
 -- GRANT SELECT ON public.actorvalues  TO anonymous;

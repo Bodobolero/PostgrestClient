@@ -128,7 +128,7 @@ public:
 
     /**
      * @brief insert tuples
-     * post the given route with payload from getJsonRequest() and return results in getJsonResult()
+     * post the given route with payload from getJsonRequest()
      * all routes must start with a leading '/'.
      * route can be like insert new item: "/item"
      * see https://docs.postgrest.org/en/stable/references/api/tables_views.html
@@ -144,6 +144,32 @@ public:
         if (error)
             return error;
         error = invokeDataAPI("POST", route, timeout, false);
+        request.clear();
+        if (error)
+            return error;
+
+        return nullptr;
+    }
+
+    /**
+     * @brief call a funciton
+     * post the given route with payload from getJsonRequest() and return results in getJsonResult().
+     * The difference to doPost is that here we retrieve the result.
+     * all routes must start with a leading '/rtc'.
+     * route can be like insert new item: "/rpc/time_parts_berlin_timezone"
+     * see https://docs.postgrest.org/en/stable/references/api/tables_views.html
+     * @param route
+     * @param timeout
+     * @return const char* nullptr on success, error message in case of failure
+     */
+    const char *doPostRTC(const char *route, unsigned long timeout = 20000)
+    {
+        if (!_isSignedIn)
+            return ERROR_NOT_SIGNED_IN;
+        const char *error = refreshTokenIfNeeded();
+        if (error)
+            return error;
+        error = invokeDataAPI("POST", route, timeout, true);
         request.clear();
         if (error)
             return error;

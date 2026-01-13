@@ -1,6 +1,6 @@
 {
     "name": "PostgrestClient",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "license": "MIT",
     "description": "Store sensor data in PostgreSQL. SQL over HTTP for Arduino using Postgrest extension",
     "keywords": [

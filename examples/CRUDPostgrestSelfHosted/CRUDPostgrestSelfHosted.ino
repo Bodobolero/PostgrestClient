@@ -73,6 +73,23 @@ void setup()
         pgClient.printJwt();
     }
 
+    // get time
+    pgClient.getJsonRequest().clear();
+    errorMessage = pgClient.doPostRTC("/rpc/time_parts_berlin_timezone");
+    if (errorMessage)
+    {
+        Serial.print("Retrieve time failed: ");
+        Serial.println(errorMessage);
+        return;
+    }
+    else
+    {
+        Serial.println("Retrieve time successful.");
+        JsonDocument &response = pgClient.getJsonResult();
+        serializeJsonPretty(response, Serial);
+        Serial.println();
+    }
+
     Serial.println("\nInserting sensor values...");
     JsonDocument &request = pgClient.getJsonRequest();
     request["sensor_name"] = "temperature";
