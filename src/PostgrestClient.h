@@ -152,7 +152,7 @@ public:
     }
 
     /**
-     * @brief call a funciton
+     * @brief call a function in Postgres
      * post the given route with payload from getJsonRequest() and return results in getJsonResult().
      * The difference to doPost is that here we retrieve the result.
      * all routes must start with a leading '/rtc'.
@@ -162,7 +162,7 @@ public:
      * @param timeout
      * @return const char* nullptr on success, error message in case of failure
      */
-    const char *doPostRTC(const char *route, unsigned long timeout = 20000)
+    const char *doPostRPC(const char *route, unsigned long timeout = 20000)
     {
         if (!_isSignedIn)
             return ERROR_NOT_SIGNED_IN;

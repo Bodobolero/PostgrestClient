@@ -75,7 +75,7 @@ void setup()
 
     // get time
     pgClient.getJsonRequest().clear();
-    errorMessage = pgClient.doPostRTC("/rpc/time_parts_berlin_timezone");
+    errorMessage = pgClient.doPostRPC("/rpc/time_parts_berlin_timezone");
     if (errorMessage)
     {
         Serial.print("Retrieve time failed: ");
